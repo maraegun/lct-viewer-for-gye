@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>엘시티 절반 모형 — 층 설계도</title>
+<style>
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+body { font-family: system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; margin: 0; color: #1c2430; background: #eef2f6; line-height: 1.6; }
+main { max-width: 1100px; margin: 0 auto; padding: 28px 22px 56px; }
+h1 { font-size: 26px; margin: 0 0 6px; }
+.sub { color: #546074; font-size: 14px; margin: 0 0 14px; }
+.sub a { color: #1d4ed8; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 12px 14px; margin: 14px 0; }
+button { border: 1px solid #cbd5e1; background: #fff; border-radius: 999px; padding: 8px 15px; font-size: 14px; cursor: pointer; color: #1c2430; }
+button:hover { background: #f1f5f9; }
+button.primary { background: #1d4ed8; border-color: #1d4ed8; color: #fff; font-weight: 700; }
+select, input[type="number"] { font-size: 14px; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; }
+input[type="range"] { width: 220px; accent-color: #1d4ed8; }
+.card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05); }
+#draw-panel svg { width: 100%; height: auto; }
+#draw-panel { overflow: auto; }
+#draw-info { font-size: 15px; color: #0f172a; font-weight: 700; margin: 10px 0 0; }
+#draw-counts { font-size: 14px; color: #374151; }
+#draw-pick { font-size: 14px; color: #0f172a; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; min-height: 2.4em; margin: 10px 0 0; padding: 8px 12px; }
+</style>
+</head>
+<body>
+<main>
+<h1>층 설계도</h1>
+<p class="sub"><a id="draw-back" href="./lct-half-viewer.html">← 입체 모형으로</a> · 모양이 바뀌는 도면만 넘긴다. 네모 한 칸이 블록 한 개다.</p>
+<div class="toolbar" role="group" aria-label="도면 고르기">
+<button id="draw-prev" type="button">◀ 이전 도면</button>
+<button id="draw-next" type="button">다음 도면 ▶</button>
+<input id="draw-range" type="range" min="1" max="72" value="1" step="1" aria-label="도면 막대">
+<input id="draw-num" type="number" min="1" max="72" value="1" aria-label="도면 숫자">
+<label>건물 <select id="draw-tower">
+<option value="all">세 건물 다</option>
+<option value="low1">낮은 건물 1</option>
+<option value="low2">낮은 건물 2</option>
+<option value="high">높은 건물</option>
+</select></label>
+</div>
+<div class="card">
+<div id="draw-panel"></div>
+<p id="draw-info"></p>
+<p id="draw-counts"></p>
+<p id="draw-pick">보고 싶은 칸을 눌러 보세요.</p>
+</div>
+<footer class="sub" style="margin-top:8px;">원본 설계: <a href="https://m.blog.naver.com/sciencehahn/222157399308" target="_blank" rel="noopener">사한의 설계실 — 마인크래프트 엘시티 lct (2020-11-29)</a> · 층별 도면 PDF는 글 안의 구글 드라이브 링크</footer>
+</main>
+<script type="module">
+import { buildModel, selectBlocks, summarizeMaterials } from './src/model.mjs';
+import { renderLayerSvg, distinctLayers } from './src/blueprints.mjs';
+
+const $ = (id) => document.getElementById(id);
+const model = buildModel();
+const bounds = distinctLayers(model).filter(({ y }) => y >= 0).map(({ y }) => y);
+let idx = 0;
+let tower = 'all';
+
+const NICE = {
+  'minecraft:cyan_stained_glass': '파란 유리',
+  'minecraft:light_blue_stained_glass': '하늘 유리',
+  'minecraft:gray_stained_glass': '회색 유리',
+  'minecraft:polished_andesite': '회색 돌',
+  'minecraft:polished_diorite': '흰 블록',
+  'minecraft:black_wool': '검은 블록',
+};
+const GAME = {
+  'minecraft:cyan_stained_glass': '청록색 색유리',
+  'minecraft:light_blue_stained_glass': '하늘색 색유리',
+  'minecraft:gray_stained_glass': '회색 색유리',
+  'minecraft:polished_andesite': '윤나는 안산암',
+  'minecraft:polished_diorite': '윤나는 섬록암',
+  'minecraft:black_wool': '검은색 양털',
+};
+const TOWER = { low1: '낮은 건물 1', low2: '낮은 건물 2', high: '높은 건물', podium: '토대' };
+const SWATCH = {
+  'minecraft:cyan_stained_glass': ['#0a7d99', '#065a6e'],
+  'minecraft:light_blue_stained_glass': ['#87b5e1', '#5a8ac0'],
+  'minecraft:gray_stained_glass': ['#7c7c7c', '#555555'],
+  'minecraft:polished_andesite': ['#b0b0b0', '#7a7a7a'],
+  'minecraft:polished_diorite': ['#e9e9e9', '#9a9a9a'],
+  'minecraft:black_wool': ['#2b2b2b', '#000000'],
+};
+
+function swatchSvg(material) {
+  const s = SWATCH[material] ?? SWATCH['minecraft:polished_diorite'];
+  return `<svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="3" y="3" width="20" height="20" fill="${s[0]}" stroke="${s[1]}" stroke-width="2"/></svg>`;
+}
+
+function pickHtml(g) {
+  const nice = NICE[g.dataset.material] ?? g.dataset.material;
+  const game = GAME[g.dataset.material] ?? g.dataset.material;
+  const tower = TOWER[g.dataset.tower] ?? g.dataset.tower;
+  return `${swatchSvg(g.dataset.material)}<span><strong>${nice}</strong> (${game}) · ${tower} ${Number(g.dataset.y) + 1}층 (가로 ${g.dataset.x}, 세로 ${g.dataset.z})</span>`;
+}
+
+function backHref(y) {
+  return './lct-half-viewer.html#y=' + (y + 1);
+}
+
+function wireCells() {
+  $('draw-panel').querySelectorAll('g[data-x]').forEach((g) => {
+    g.style.cursor = 'pointer';
+    g.addEventListener('click', () => {
+      const p = $('draw-pick');
+      p.innerHTML = pickHtml(g);
+      p.style.display = 'flex';
+      p.style.alignItems = 'center';
+      p.style.gap = '8px';
+    });
+  });
+}
+
+function render() {
+  const y = bounds[idx] ?? 0;
+  $('draw-panel').innerHTML = renderLayerSvg(model, y, { tower, material: 'all', cell: 26 });
+  wireCells();
+  $('draw-back').href = backHref(y);
+  try { history.replaceState(null, '', '#y=' + (y + 1)); } catch { /* 무시 */ }
+  const ds = distinctLayers(model).find((d) => d.y === y);
+  const span = ds ? Math.max(1, ds.through - y) : 1;
+  $('draw-info').textContent =
+    `${y + 1}층 도면 (도면 ${idx + 1}/${bounds.length})` +
+    (span > 1 ? ` — 이 모양대로 ${span}층 쌓는다` : '');
+  const counts = summarizeMaterials(selectBlocks(model, { tower, layer: y }));
+  $('draw-counts').textContent =
+    counts.filter((c) => c.count > 0).map((c) => `${NICE[c.material]} ${c.count}개`).join(' · ') || '없음';
+  $('draw-range').value = y + 1;
+  $('draw-num').value = y + 1;
+}
+
+function go(d) {
+  idx = Math.max(0, Math.min(bounds.length - 1, idx + d));
+  render();
+}
+
+$('draw-prev').addEventListener('click', () => go(-1));
+$('draw-next').addEventListener('click', () => go(1));
+$('draw-range').addEventListener('input', (e) => {
+  const y = Math.max(1, Math.min(72, Math.round(Number(e.target.value) || 1))) - 1;
+  const i = bounds.findIndex((b) => b >= y);
+  idx = i < 0 ? bounds.length - 1 : i;
+  render();
+});
+$('draw-num').addEventListener('change', (e) => {
+  const y = Math.max(1, Math.min(72, Math.round(Number(e.target.value) || 1))) - 1;
+  const i = bounds.findIndex((b) => b >= y);
+  idx = i < 0 ? bounds.length - 1 : i;
+  render();
+});
+$('draw-tower').addEventListener('change', (e) => {
+  tower = e.target.value;
+  render();
+});
+document.addEventListener('keydown', (e) => {
+  const tag = document.activeElement?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  if (e.key === 'ArrowLeft') go(-1);
+  if (e.key === 'ArrowRight') go(1);
+});
+
+// 뷰어 층 패널의 크게 보기(#y=층)에서 들어오면 해당 도면부터 보여준다.
+try {
+  const m = /^#y=(\d+)$/.exec(location.hash);
+  if (m) {
+    const y = Math.max(1, Math.min(72, Number(m[1]))) - 1;
+    const i = bounds.findIndex((b) => b >= y);
+    idx = i < 0 ? bounds.length - 1 : i;
+  }
+} catch { /* 해시 없으면 1층 */ }
+render();
+</script>
+</body>
+</html>

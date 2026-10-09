@@ -1,5 +1,5 @@
 import { buildModel, selectBlocks, summarizeMaterials, HEIGHT_LIMITS, DEFAULT_HEIGHTS } from './model.mjs';
-import { renderLayerSvg } from './blueprints.mjs';
+import { renderLayerSvg, distinctLayers } from './blueprints.mjs';
 import { createViewer } from './viewer.mjs';
 
 const $ = (id) => document.getElementById(id);
@@ -64,6 +64,10 @@ function currentSelection() {
 
 function applySelection() {
   viewer?.setSelection(currentSelection());
+  try {
+    const want = state.layer === null ? '' : '#y=' + (state.layer + 1);
+    if (location.hash !== want) history.replaceState(null, '', want || location.pathname);
+  } catch { /* 무시 */ }
   renderPanels();
 }
 
@@ -102,6 +106,8 @@ function maxHeight() {
 
 function renderPanels() {
   const sel = currentSelection();
+  const bigLink = document.getElementById('layer-big-link');
+  if (bigLink) bigLink.href = './lct-drawings.html' + (sel.layer !== null ? `#y=${sel.layer + 1}` : '');
   if (sel.layer === null) {
     layerPanel.innerHTML = '<p>위에서 층을 고르면, 게임에서 그대로 쌓을 설계도가 여기에 나온다.</p>';
   } else {
@@ -114,12 +120,16 @@ function renderPanels() {
       layerPanel.innerHTML = renderLayerSvg(model, sel.layer, {
         tower: sel.tower,
         material: sel.material,
+        cell: 20,
       });
       const counts = summarizeMaterials(layerBlocks);
       const parts = counts.filter((c) => c.count > 0).map((c) => `${NICE_NAME[c.material]} ${c.count}개`);
+      const span = distinctSpan(sel.layer);
       const div = document.createElement('p');
       div.textContent =
-        `${sel.layer + 1}층에 둘 것: ${parts.join(' · ') || '없음'}. 위쪽이 북쪽, 네모 한 칸이 한 블록이다.`;
+        `${sel.layer + 1}층에 둘 것: ${parts.join(' · ') || '없음'}.` +
+        (span > 1 ? ` 이 모양대로 ${span}층 쌓는다.` : '') +
+        ` 위쪽이 북쪽, 네모 한 칸이 한 블록이다.`;
       layerPanel.appendChild(div);
       layerPanel.querySelectorAll('g[data-x]').forEach((g) => {
         g.style.cursor = 'pointer';
@@ -235,21 +245,16 @@ function setLayerFromUI(displayHeight) {
   syncControls();
   applySelection();
 }
-// 모양이 바뀌는 층으로 건너뛰기: 일일이 넘기지 않고 경계만 밟는다.
+// 모양이 바뀌는 층으로 건너뛰기: 일일이 넘기지 않고 도면만 밟는다.
 function layerBoundaries() {
-  const sig = new Map();
-  for (const b of model.blocks) {
-    if (!sig.has(b.y)) sig.set(b.y, []);
-    sig.get(b.y).push(`${b.x},${b.z},${b.material},${b.tower}`);
-  }
-  const keys = [...sig.keys()].sort((a, b) => a - b);
-  const bounds = keys.length ? [keys[0]] : [];
-  for (let i = 1; i < keys.length; i++) {
-    const a = sig.get(keys[i - 1]).slice().sort().join('|');
-    const c = sig.get(keys[i]).slice().sort().join('|');
-    if (a !== c) bounds.push(keys[i]);
-  }
-  return bounds;
+  return distinctLayers(model).map(({ y }) => y);
+}
+// 지금 층과 같은 모양이 몇 층 이어지는지 셈한다.
+function distinctSpan(y) {
+  const ds = distinctLayers(model);
+  const i = ds.findIndex((d) => d.y === y);
+  if (i < 0) return 1;
+  return Math.max(1, ds[i].through - y);
 }
 // 한 층씩 오르내리기: 처음 누르면 1층에서 시작한다.
 function stepLayer(delta) {
@@ -369,6 +374,16 @@ $('btn-clear-pick').addEventListener('click', () => {
 });
 
 // 처음 화면: 건물 전체 · 전부 · 모든 블록
+// 도면 탭에서 돌아오면(#y=층) 해당 층을 고른 채로 연다.
+try {
+  const m = /^#y=(\d+)$/.exec(location.hash);
+  if (m) {
+    const top = Math.max(...model.towers.map((t) => t.height));
+    const h = Math.max(1, Math.min(top, Math.round(Number(m[1]))));
+    state.layer = h - 1;
+    state.through = false;
+  }
+} catch { /* 해시 없으면 전부 */ }
 syncControls();
 applySelection();
 renderPick();

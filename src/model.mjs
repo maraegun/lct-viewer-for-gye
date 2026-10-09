@@ -22,7 +22,9 @@ export const COORDINATE_SYSTEM = {
 };
 
 export const DEFAULT_HEIGHTS = { low: 56, high: 72 };
-export const HEIGHT_LIMITS = { low: { min: 10, max: 56 }, high: { min: 10, max: 72 } };
+// 높은 동은 어깨지붕(y=shoulder)이 좌우 날개를 잇는 유일한 연결부다.
+// shoulder = height - 13이므로 height 13 미만에서는 동이 두 덩이로 끊긴다.
+export const HEIGHT_LIMITS = { low: { min: 10, max: 56 }, high: { min: 13, max: 72 } };
 export const TOWERS = [
   // 원본 A-4 배치 절반축소: 동1 (0,0), 동2 (20,4), 동3 (40,10).
   { id: 'low1', name: '낮은 건물 1', origin: { x: 0, z: 0 }, height: DEFAULT_HEIGHTS.low, kind: 'low' },
@@ -30,10 +32,20 @@ export const TOWERS = [
   { id: 'high', name: '높은 건물', origin: { x: 40, z: 10 }, height: DEFAULT_HEIGHTS.high, kind: 'high' },
 ];
 
-// 수직 흰 테두리 위치(로컬 x,z). 해당 높이에 외피 칸이 있을 때만 적용한다.
-// 밑면(z12-14)은 원본 B-1 절반축소 모양을 따르며 좌우 바깥(x2, x11)에 흰 블록을 둔다.
-const TRIM = new Set([
-  '2,0', '10,0', '0,3', '12,3', '5,2', '7,2', '4,8', '8,8', '2,12', '11,12',
+// 몸통 외피 중 원본과 다른 재료 칸(로컬 x,z). PDF 원본 B-1 전사.
+// D=윤나는 섬록암(V홈 대각·밑면), E=회색 색유리(꼭대기·날개끝·밑면바닥).
+const TRIM_D = new Set([
+  '4,1', '5,1', '8,1', '9,1',
+  '5,2', '6,2', '7,2', '8,2',
+  '6,3', '7,3',
+  '3,13', '4,13', '9,13', '10,13',
+]);
+const TRIM_E = new Set([
+  '2,0', '3,0', '10,0', '11,0',
+  '0,2', '13,2',
+  '6,3', '7,3',
+  '2,12', '3,12', '10,12', '11,12',
+  '4,14', '5,14', '8,14', '9,14',
 ]);
 
 function addRow(set, z, ranges) {
@@ -43,36 +55,38 @@ function addRow(set, z, ranges) {
 }
 
 // 낮은 동 바닥 단면 L: z행별 포함 x구간(양끝 포함)
-// 원본 B-1(23x22) 절반축소 기반: 날개 V홈 + 줄기 + 밑면 돌출 3줄(z12-14).
+// PDF 원본 B-1(27폭×29행) 절반·좌우대칭 전사. V홈은 z5까지, 줄기는 속 빈 측벽,
+// 밑면은 W자 대칭(z12-14)이다.
 function sectionL() {
   const s = new Set();
-  addRow(s, 0, [[2, 3], [9, 10]]);
-  addRow(s, 1, [[1, 4], [8, 11]]);
-  addRow(s, 2, [[0, 5], [7, 12]]);
-  addRow(s, 3, [[0, 1], [6], [10, 11]]);
-  addRow(s, 4, [[1, 2], [6], [9, 10]]);
-  addRow(s, 5, [[2, 10]]);
-  addRow(s, 6, [[3, 9]]);
-  for (let z = 7; z <= 11; z++) addRow(s, z, [[4, 8]]);
-  addRow(s, 12, [[2, 3], [6, 7], [10, 11]]);
-  addRow(s, 13, [[2, 11]]);
-  addRow(s, 14, [[4, 5], [8]]);
+  addRow(s, 0, [[1, 3], [9, 11]]);
+  addRow(s, 1, [[0, 4], [8, 12]]);
+  addRow(s, 2, [[0, 1], [4, 5], [7, 8], [11, 12]]);
+  addRow(s, 3, [[0, 1], [5, 7], [11, 12]]);
+  addRow(s, 4, [[1, 2], [5, 7], [10, 11]]);
+  addRow(s, 5, [[2, 3], [9, 10]]);
+  addRow(s, 6, [[2, 3], [9, 10]]);
+  for (let z = 7; z <= 11; z++) addRow(s, z, [[3, 4], [8, 9]]);
+  addRow(s, 12, [[2, 3], [5, 7], [9, 10]]);
+  addRow(s, 13, [[2, 10]]);
+  addRow(s, 14, [[4, 5], [7, 8]]);
   return s;
 }
 
-// 높은 동 바닥 단면 H: L의 z=0..11 유지, z=12..14를 두 갈래 끝으로 교체
+// 높은 동 바닥 단면 H: PDF 원본 C-1 절반·좌우대칭 전사.
+// L과 같은 V홈·줄기, 밑면은 일자형(z12-14)이다.
 function sectionH() {
   const s = new Set();
-  addRow(s, 0, [[2, 3], [9, 10]]);
-  addRow(s, 1, [[1, 4], [8, 11]]);
-  addRow(s, 2, [[0, 5], [7, 12]]);
-  addRow(s, 3, [[0, 1], [6], [10, 11]]);
-  addRow(s, 4, [[1, 2], [6], [9, 10]]);
-  addRow(s, 5, [[2, 10]]);
-  addRow(s, 6, [[3, 9]]);
-  for (let z = 7; z <= 11; z++) addRow(s, z, [[4, 8]]);
-  addRow(s, 12, [[3, 9]]);
-  addRow(s, 13, [[3, 5], [7, 9]]);
+  addRow(s, 0, [[1, 3], [9, 11]]);
+  addRow(s, 1, [[0, 4], [8, 12]]);
+  addRow(s, 2, [[0, 1], [4, 5], [7, 8], [11, 12]]);
+  addRow(s, 3, [[0, 1], [5, 7], [11, 12]]);
+  addRow(s, 4, [[1, 2], [5, 7], [10, 11]]);
+  addRow(s, 5, [[2, 3], [9, 10]]);
+  addRow(s, 6, [[2, 3], [9, 10]]);
+  for (let z = 7; z <= 11; z++) addRow(s, z, [[3, 4], [8, 9]]);
+  addRow(s, 12, [[2, 10]]);
+  addRow(s, 13, [[2, 10]]);
   addRow(s, 14, [[4, 5], [7, 8]]);
   return s;
 }
@@ -102,17 +116,20 @@ function isCrown(key) {
 
 const L = sectionL();
 const H = sectionH();
-// 윗몸통 U: 원본 B-15 몸통(rows 15-27) 절반축소. 안산암 2기둥 + 가운데 홈.
+// 윗몸통 U: PDF 원본 B-15(r7-26) 절반 전사. 회색 전면 + 중앙 홈.
 // H의 z0-8이 아니라 별도 단면이다.
 const U = new Set();
 for (const [y, xs] of [
-  [0, [4, 5, 6, 9, 10, 11]],
-  [1, [4, 5, 6, 8, 9, 10]],
-  [2, [4, 5, 6, 8, 9, 10]],
-  [3, [5, 6, 8, 9, 10]],
-  [4, [5, 6, 8, 9, 10]],
-  [5, [4, 5, 6, 8, 9, 10]],
-  [6, [4, 5, 6, 9, 10, 11]],
+  [0, [0, 1, 2, 7, 8, 9]],
+  [1, [0, 1, 2, 3, 7, 8, 9, 10]],
+  [2, [1, 2, 3, 7, 8, 9]],
+  [3, [1, 2, 3, 6, 7, 8]],
+  [4, [2, 3, 4, 6, 7, 8]],
+  [5, [2, 3, 4, 6, 7, 8]],
+  [6, [2, 3, 4, 6, 7, 8]],
+  [7, [2, 3, 4, 6, 7, 8]],
+  [8, [2, 3, 4, 6, 7, 8]],
+  [9, [1, 2, 3, 6, 7, 8, 9]],
 ] ) {
   for (const x of xs) U.add(`${x},${y}`);
 }
@@ -121,12 +138,12 @@ const RIM_H = rim(H);
 const RIM_U = rim(U);
 const CROWN_L = new Set([...RIM_L].filter(isCrown));
 const CROWN_U = new Set([...RIM_U].filter(isCrown));
-// 높은동 꼭대기: 원본 B-15 뿔(두 갈래) 절반축소. 윗몸통 너비에 맞춘다.
-const CROWN_HU_LO = new Set([
-  '4,0', '5,0', '6,0', '9,0', '10,0', '11,0',
-  '4,1', '5,1', '6,1', '8,1', '9,1', '10,1', '11,1',
-  '4,2', '5,2', '6,2', '9,2', '10,2', '11,2',
+// 높은동 꼭대기: PDF 원본 B-15 뿔 절반 전사. 베이지 V + 회색 끝 (2행).
+const CROWN_HU = new Set([
+  '2,0', '7,0',
+  '1,1', '2,1', '7,1', '8,1',
 ]);
+const CROWN_HU_E = new Set(['2,0', '7,0']);
 // 내벽: 외피 안쪽에 닿은 내부 칸 (원본 B 도면의 검은 양털 한 겹).
 function innerWall(cells, shell) {
   const out = new Set();
@@ -158,12 +175,12 @@ function isEntrance(towerId, x, y, z) {
 }
 
 // 높이를 줄이면 몸통만 짧아지고 지붕·꼭대기 모양은 그대로 둔다.
-// 낮은 건물: 꼭대기 6(지붕 1 + 갈래 5), 높은 건물: 어깨지붕 1 + 윗몸통 7 + 상부지붕 1 + 꼭대기 3 = 12.
+// 낮은 건물: 꼭대기 6(지붕 1 + 갈래 5), 높은 건물: 어깨지붕 1 + 윗몸통 10 + 뿔 2 = 13.
 function splitLow(height) {
   return { crown: height - 6 };
 }
 function splitHigh(height) {
-  return { shoulder: height - 12 };
+  return { shoulder: height - 13 };
 }
 // 층별 외벽 재료 (원본 B/C 도면 대조).
 // 낮은동 = B동 19구간 × 3블록, 높은동 = C동 8구간 × 9블록.
@@ -210,10 +227,9 @@ function layerShape(towerId, y, towerHeight) {
     const { shoulder } = splitHigh(towerHeight);
     if (y < shoulder) return { kind: 'shell', cells: RIM_H, inner: INNER_H, ring: ringFor(towerId, y, towerHeight) };
     if (y === shoulder) return { kind: 'roof', cells: H };
-    if (y < shoulder + 8) return { kind: 'shell', cells: RIM_U, inner: INNER_U, ring: GLASS };
-    if (y === shoulder + 8) return { kind: 'roof', cells: U };
-    // 뿔 3층. B-15 절반축소 모양 그대로 쌓는다. 끝만 청록 유리(원본 B-15 봉우리 끝).
-    return { kind: 'crown', cells: CROWN_HU_LO };
+    if (y < shoulder + 11) return { kind: 'shell', cells: RIM_U, inner: INNER_U, ring: GRAY };
+    // 뿔 2층. B-15 절반 전사 (베이지 V + 회색 끝).
+    return { kind: 'horn', cells: CROWN_HU };
   }
   const { crown } = splitLow(towerHeight);
   if (y < crown) return { kind: 'shell', cells: RIM_L, inner: INNER_L, ring: ringFor(towerId, y, towerHeight) };
@@ -223,21 +239,17 @@ function layerShape(towerId, y, towerHeight) {
 }
 
 export const PODIUM = {
-  // 토대(기단): 원본 A-2 기단 절반축소. 서쪽 좁고 동쪽 넓으며 양끝은 직선,
-  // 꺾임은 북·남 변 중간 4곳의 계단식 전이구간에만 있다. 외곽선은 A-2 그대로고
-  // 속은 받침으로 채운다(원본은 테두리 1겹만 그려 있다).
+  // 토대(기단): PDF 원본 A-3 절반 전사 속채움 (53×25).
+  // 건물1 밑면 남쪽 돌출 2행은 원본 특성 그대로 둔다.
   // y -3..-1 (건물 1층 아래), 윤나는 안산암.
   depth: 3,
 };
-// A-2 half rows (z0-24): 각 행의 [x0, x1] 구간 목록. 서쪽(x0) z7..16, 동쪽(x52) z0..24.
+// A-3 half rows (z0-24): 각 행 [x0, x1]. r23-24는 범례 가림으로 A-1 치수 복원.
 const PODIUM_ROWS = [
-  [[38, 52]], [[36, 38], [52, 52]], [[34, 36], [52, 52]], [[18, 34], [52, 52]],
-  [[16, 18], [52, 52]], [[14, 16], [52, 52]], [[12, 14], [52, 52]], [[0, 12], [52, 52]],
-  [[0, 0], [52, 52]], [[0, 0], [52, 52]], [[0, 0], [52, 52]], [[0, 0], [52, 52]],
-  [[0, 0], [52, 52]], [[0, 0], [52, 52]], [[0, 0], [52, 52]], [[0, 0], [52, 52]],
-  [[0, 12], [52, 52]], [[12, 14], [52, 52]], [[14, 16], [52, 52]], [[16, 18], [52, 52]],
-  [[18, 34], [52, 52]], [[34, 36], [52, 52]], [[36, 38], [52, 52]], [[38, 40], [52, 52]],
-  [[40, 52]],
+  [[0, 13]], [[0, 14]], [[0, 16]], [[0, 17]], [[0, 32]], [[0, 32]],
+  [[0, 34]], [[0, 35]], [[0, 35]], [[0, 37]], [[0, 51]], [[0, 51]],
+  [[0, 13], [13, 51]], [[15, 51]], [[16, 51]], [[18, 51]], [[32, 51]], [[33, 51]],
+  [[34, 51]], [[34, 51]], [[35, 51]], [[36, 51]], [[36, 51]], [[37, 51]], [[38, 51]],
 ];
 // 건물 1층 발밑 칸: 테두리와 별개로 받침을 깔아 발이 밖에 뜨지 않게 한다.
 function towerBaseCells() {
@@ -287,11 +299,15 @@ export function buildModel(heights = {}, { podium = true } = {}) {
       for (const key of cells) {
         const [lx, lz] = key.split(',').map(Number);
         if (isEntrance(tower.id, lx, y, lz)) continue;
-        // 지붕·갈래층은 섬록암, 갈래(crown) 끝은 청록 유리. 흰 테두리는 그대로 둔다.
+        // 지붕은 전면 섬록암. 뿔(horn)은 베이지 V + 회색 끝. 갈래(crown)는
+        // 테두리 위치(B-16)에 회색끝·베이지V·청록기둥. 몸통 외피는 ring 재료.
         const material =
-          kind === 'crown'
-            ? (TRIM.has(key) ? DIORITE : GLASS)
-            : kind === 'roof' || TRIM.has(key) ? DIORITE : (ring ?? GLASS);
+          kind === 'horn'
+            ? (CROWN_HU_E.has(key) ? GRAY : DIORITE)
+            : kind === 'crown'
+              ? (TRIM_E.has(key) ? GRAY : TRIM_D.has(key) ? DIORITE : GLASS)
+              : kind === 'roof' ? DIORITE
+                : TRIM_E.has(key) ? GRAY : TRIM_D.has(key) ? DIORITE : (ring ?? GLASS);
         blocks.push({
           x: tower.origin.x + lx,
           y,

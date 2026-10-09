@@ -44,16 +44,16 @@ test('정상 모델은 총량·재료 분할·동별 연결을 만족한다', ()
   const model = buildModel();
   const result = validateModel(model);
   assert.equal(result.ok, true, JSON.stringify(result.errors.slice(0, 5)));
-  assert.equal(result.stats.total, 15856);
-  assert.equal(result.stats.byTower.low1, 4512);
-  assert.equal(result.stats.byTower.low2, 4512);
-  assert.equal(result.stats.byTower.high, 5623);
-  assert.equal(result.stats.byMaterial[GLASS], 3111);
-  assert.equal(result.stats.byMaterial[SKY], 3375);
-  assert.equal(result.stats.byMaterial[GRAY], 1333);
-  assert.equal(result.stats.byMaterial[ANDESITE], 2212);
-  assert.equal(result.stats.byMaterial[DIORITE], 1675);
-  assert.equal(result.stats.byMaterial[WOOL], 4150);
+  assert.equal(result.stats.total, 17071);
+  assert.equal(result.stats.byTower.low1, 4486);
+  assert.equal(result.stats.byTower.low2, 4486);
+  assert.equal(result.stats.byTower.high, 5918);
+  assert.equal(result.stats.byMaterial[GLASS], 3144);
+  assert.equal(result.stats.byMaterial[SKY], 3687);
+  assert.equal(result.stats.byMaterial[GRAY], 3963);
+  assert.equal(result.stats.byMaterial[ANDESITE], 3288);
+  assert.equal(result.stats.byMaterial[DIORITE], 1819);
+  assert.equal(result.stats.byMaterial[WOOL], 1170);
   // 높이 범위 명시 확인
   for (const b of model.blocks) {
     assert.ok(Number.isInteger(b.x) && Number.isInteger(b.y) && Number.isInteger(b.z));
@@ -77,8 +77,9 @@ test('출입구 12칸이 비고 양옆 구조와 위 블록이 남는다', () =>
   for (const [x, y, z] of expected) {
     assert.ok(!at.has(`${x},${y},${z}`), `출입구 (${x},${y},${z})는 공기여야 한다`);
   }
-  // 입구 양옆 구조(낮은 동 1 (4,0,11),(7,0,11))와 위 블록(y=2)이 존재
-  for (const [x, y, z] of [[4, 0, 11], [7, 0, 11], [5, 2, 11], [6, 2, 11]]) {
+  // 입구 양옆 구조(낮은 동 1 (4,0,11),(8,0,11))와 위층 측벽(4,2,11),(8,2,11)이 존재.
+  // 출입구 위(z11 줄기 속)는 원본처럼 빈 통로다.
+  for (const [x, y, z] of [[4, 0, 11], [8, 0, 11], [4, 2, 11], [8, 2, 11]]) {
     assert.ok(at.has(`${x},${y},${z}`), `구조 (${x},${y},${z})가 남아 있어야 한다`);
   }
 });
@@ -86,13 +87,13 @@ test('출입구 12칸이 비고 양옆 구조와 위 블록이 남는다', () =>
 test('지붕과 꼭대기 경계 높이를 확인한다', () => {
   const model = buildModel();
   const at = new Map(model.blocks.map((b) => [`${b.x},${b.y},${b.z}`, b]));
-  // 낮은 동 1: y=50 지붕은 내부 포함 전면 섬록암, y=51 꼭대기 시작
-  assert.equal(at.get('5,50,8')?.material, DIORITE);
-  // 높은 동: y=55 어깨 지붕, y=56 상부 몸통, y=63 상부 지붕, y=64 꼭대기
-  assert.equal(at.get('45,60,18')?.material, DIORITE);
-  assert.ok(at.get('46,61,14'), 'y=61 윗몸통 필요');
-  assert.equal(at.get('46,68,14')?.material, DIORITE);
-  assert.ok(at.get('44,69,10'), 'y=69 꼭대기 필요');
+  // 낮은 동 1: y=50 지붕은 전면 섬록암, y=51 갈래 시작
+  assert.equal(at.get('3,50,8')?.material, DIORITE);
+  // 높은 동: y=59 어깨 지붕, y=60 윗몸통, y=70 뿔 2층
+  assert.equal(at.get('43,59,18')?.material, DIORITE);
+  assert.ok(at.get('46,60,14'), 'y=60 윗몸통 필요');
+  assert.equal(at.get('46,69,14')?.material, GRAY);
+  assert.ok(at.get('42,70,10'), 'y=70 뿔 필요');
   // y=72에는 모델 블록이 없다
   assert.ok(!model.blocks.some((b) => b.y === 72), 'y=72 블록 없음');
 });
@@ -104,8 +105,8 @@ test('층 선택 경계와 필터 교집합이 동작한다', () => {
   assert.deepEqual(summarizeMaterials(empty).map((s) => s.count), [0, 0, 0, 0, 0, 0]);
   const crown = selectBlocks(model, { tower: 'high', layer: 71 });
   assert.ok(crown.length > 0);
-  assert.ok(crown.every((b) => b.material === GLASS || b.material === DIORITE), '높이 72는 유리 끝+흰 테두리만');
-  assert.ok(crown.some((b) => b.material === GLASS), '원본 B-15처럼 갈래 끝은 유리');
+  assert.ok(crown.every((b) => b.material === GRAY || b.material === DIORITE), '높이 72는 회색 끝+베이지V만');
+  assert.ok(crown.some((b) => b.material === GRAY), '원본 B-15처럼 뿔 끝은 회색');
   const through = selectBlocks(model, { tower: 'high', layer: 2, through: true });
   assert.ok(through.every((b) => b.y <= 2));
   assert.equal(
@@ -127,5 +128,19 @@ test('층 선택 경계와 필터 교집합이 동작한다', () => {
   assert.ok(selectBlocks(model, { layer: -3 }).length > 0);
   // 최대 초과 정상 정수: 단층 빈 배열, 누적 전체 반환
   assert.equal(selectBlocks(model, { layer: 999 }).length, 0);
-  assert.equal(selectBlocks(model, { layer: 999, through: true }).length, 15856);
+  assert.equal(selectBlocks(model, { layer: 999, through: true }).length, 17071);
+});
+
+test('높이 하한에서는 동이 끊어지지 않는다', () => {
+  // 높은 동 어깨지붕이 좌우 날개를 잇는다. 하한 미만은 검증 실패여야 한다.
+  for (const h of [13, 16, 24]) {
+    const model = buildModel({ high: h });
+    const result = validateModel(model);
+    assert.equal(result.ok, true, `high=${h}: ${JSON.stringify(result.errors.slice(0, 3))}`);
+    assert.equal(result.stats.components.high, 1);
+  }
+  const broken = buildModel({ high: 11 }, { podium: false });
+  // buildModel은 하한 13으로 올림하므로 11 요청도 13으로 지어져 끊어지지 않는다.
+  assert.equal(broken.towers.find((t) => t.id === 'high').height, 13);
+  assert.equal(validateModel(broken).ok, true);
 });

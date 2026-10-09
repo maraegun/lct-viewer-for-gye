@@ -12,7 +12,7 @@ import {
 test('CSV 왕복 집합이 모델과 같고 재료표가 블록에서 재집계한 값과 같다', () => {
   const model = buildModel();
   const rows = parseBlocksCsv(serializeBlocksCsv(model));
-  assert.equal(rows.length, 15856);
+  assert.equal(rows.length, 17071);
   const a = new Set(model.blocks.map((b) => `${b.x},${b.y},${b.z},${b.material},${b.tower}`));
   const b = new Set(rows.map((r) => `${r.x},${r.y},${r.z},${r.material},${r.tower}`));
   assert.deepEqual(b, a);
@@ -58,6 +58,27 @@ test('75개 도면 레이어 합집합이 모델과 같다', () => {
     model.blocks.map((b) => `${b.x},${b.y},${b.z},${b.material},${b.tower}`),
   );
   assert.deepEqual(seen, expected);
+});
+
+test('바뀌는 높이 도면만 모아도 전 높이를 덮는다', async () => {
+  const { distinctLayers } = await import('../src/blueprints.mjs');
+  const model = buildModel();
+  const ds = distinctLayers(model);
+  assert.ok(ds.length > 0 && ds.length < 75);
+  // 첫 항목은 토대 맨 아래, through는 단조 증가
+  assert.equal(ds[0].y, -3);
+  for (let i = 1; i < ds.length; i++) {
+    assert.ok(ds[i].y > ds[i - 1].y);
+    assert.ok(ds[i].through > ds[i].y);
+  }
+  // 같은 모양 구간은 실제로 같은 서명이다
+  const sig = (y) => model.blocks.filter((b) => b.y === y)
+    .map((b) => `${b.x},${b.z},${b.material},${b.tower}`).sort().join('|');
+  for (const { y, through } of ds) {
+    for (let k = y + 1; k < through; k++) {
+      assert.equal(sig(k), sig(y), `높이 ${k + 1}은 높이 ${y + 1}과 같아야 한다`);
+    }
+  }
 });
 
 test('모델·CSV 순서가 결정적이고 공기·지면을 세지 않는다', () => {

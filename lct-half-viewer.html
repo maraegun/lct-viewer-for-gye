@@ -55,8 +55,14 @@ details.plain summary { cursor: pointer; font-size: 13px; color: #546074; }
   background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;
   min-height: 2.4em; margin: 12px 0 0; padding: 8px 12px;
 }
-#layer-panel svg { max-width: 100%; height: auto; border-radius: 8px; }
-#layer-panel { max-height: 460px; overflow: auto; }
+#layer-panel svg { width: 100%; height: auto; border-radius: 8px; }
+#layer-panel { max-height: 640px; overflow: auto; }
+.card h2 .mini-btn {
+  display: inline-block; font-size: 13px; font-weight: 400; color: #546074;
+  border: 1px solid #e2e8f0; border-radius: 999px; padding: 3px 12px;
+  margin-left: 8px; text-decoration: none; vertical-align: middle;
+}
+.card h2 .mini-btn:hover { background: #f1f5f9; color: #1c2430; }
 table { border-collapse: collapse; width: 100%; font-size: 14px; }
 th, td { border-bottom: 1px solid #eef2f7; padding: 9px 6px; text-align: left; vertical-align: middle; }
 tbody tr:hover { background: #f8fafc; }
@@ -72,8 +78,7 @@ td small { color: #64748b; }
 <script type="importmap">
 {
   "imports": {
-    "three": "./node_modules/three/build/three.module.js",
-    "three/addons/": "./node_modules/three/examples/jsm/"
+    "three": "./vendor/three.module.js"
   }
 }
 </script>
@@ -82,7 +87,7 @@ td small { color: #64748b; }
 <main>
 <div class="hero">
 <h1>엘시티 절반 모형</h1>
-<p>실제 크기의 절반으로 줄인 세 건물 모형이다. 돌려 보고, 층을 나누고, 쌓이는 모습을 볼 수 있다.</p>
+<p>실제 크기의 절반으로 줄인 세 건물 모형이다. 돌려 보고, 층을 나누고, 쌓이는 모습을 볼 수 있다. <a href="./lct-drawings.html" style="white-space:nowrap;">층 설계도 크게 보기 →</a></p>
 </div>
 
 <div class="toolbar">
@@ -100,12 +105,12 @@ td small { color: #64748b; }
 <button type="button" data-heights="16,24">아주 낮게</button>
 </div>
 <div class="group" role="group" aria-label="층 고르기">
-<button id="layer-jump-prev" type="button" aria-label="모양이 바뀌는 아래층으로">◀ 모양 바뀜</button>
+<button id="layer-jump-prev" type="button" aria-label="이전 도면으로">◀ 이전 도면</button>
 <button id="layer-prev" type="button" aria-label="한 층 아래로">아래층</button>
 <input id="layer-range" type="range" min="1" max="72" value="72" step="1" aria-label="층 막대">
 <input id="layer-num" type="number" min="1" max="72" value="72" aria-label="층 숫자">
 <button id="layer-next" type="button" aria-label="한 층 위로">위층</button>
-<button id="layer-jump-next" type="button" aria-label="모양이 바뀌는 위층으로">모양 바뀜 ▶</button>
+<button id="layer-jump-next" type="button" aria-label="다음 도면으로">다음 도면 ▶</button>
 <label><input type="radio" name="cut" value="all" checked> 전부</label>
 <label><input type="radio" name="cut" value="only"> 이 층만</label>
 <label><input type="radio" name="cut" value="through"> 여기까지</label>
@@ -130,7 +135,7 @@ td small { color: #64748b; }
 <option value="wool">검은 블록만</option>
 </select></label>
 <label>낮은 건물 높이 <input id="height-low" type="range" min="10" max="56" value="56" step="1"> <input id="height-low-num" type="number" min="10" max="56" value="56"></label>
-<label>높은 건물 높이 <input id="height-high" type="range" min="10" max="72" value="72" step="1"> <input id="height-high-num" type="number" min="10" max="72" value="72"></label>
+<label>높은 건물 높이 <input id="height-high" type="range" min="13" max="72" value="72" step="1"> <input id="height-high-num" type="number" min="13" max="72" value="72"></label>
 <button id="height-reset" type="button">원래대로</button>
 </details>
 </div>
@@ -148,10 +153,11 @@ td small { color: #64748b; }
 <p><button id="btn-clear-pick" type="button">고른 것 지우기</button></p>
 </div>
 <div>
-<section class="card" aria-label="층 설계도"><h2>층 설계도</h2><div id="layer-panel"></div></section>
+<section class="card" aria-label="층 설계도"><h2>층 설계도 <a id="layer-big-link" class="mini-btn" href="./lct-drawings.html">크게 보기 →</a></h2><div id="layer-panel"></div></section>
 <section class="card" aria-label="필요한 블록"><h2>필요한 블록</h2><div id="material-panel"></div></section>
 </div>
 </div>
+<footer class="hint" style="margin-top:8px;">원본 설계: <a href="https://m.blog.naver.com/sciencehahn/222157399308" target="_blank" rel="noopener">사한의 설계실 — 마인크래프트 엘시티 lct (2020-11-29)</a> · 층별 도면 PDF는 글 안의 구글 드라이브 링크</footer>
 </main>
 
 <script type="module" src="./src/app.mjs"></script>

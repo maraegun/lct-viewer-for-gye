@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { OrbitControls } from '../vendor/OrbitControls.js';
 import { DIORITE, GLASS, SKY, GRAY, ANDESITE, WOOL } from './model.mjs';
 
 // 고정 시드 난수: 텍스처를 결정적으로 생성한다.

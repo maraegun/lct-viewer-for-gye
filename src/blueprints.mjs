@@ -48,13 +48,36 @@ function layerCells(model, y, selection) {
   return at;
 }
 
+// 모양이 바뀌는 높이만 모은다. 같은 모양이 이어지면 첫 높이만 싣는다.
+// through는 다음 바뀜 전까지 같은 모양이 이어지는 마지막 높이 + 1이다.
+export function distinctLayers(model) {
+  const sig = new Map();
+  for (const b of model?.blocks ?? []) {
+    if (!sig.has(b.y)) sig.set(b.y, []);
+    sig.get(b.y).push(`${b.x},${b.z},${b.material},${b.tower}`);
+  }
+  const keys = [...sig.keys()].sort((a, b) => a - b);
+  const out = [];
+  for (let i = 0; i < keys.length; i++) {
+    const prev = i === 0 ? null : sig.get(keys[i - 1]).slice().sort().join('|');
+    const cur = sig.get(keys[i]).slice().sort().join('|');
+    if (i === 0 || prev !== cur) {
+      const next = keys[i + 1];
+      out.push({ y: keys[i], through: next !== undefined ? next : keys[i] + 1 });
+    }
+  }
+  return out;
+}
+
 // 지정된 정확히 한 높이를 그린다. 누적 모드에서도 도면은 그 높이만 표시한다.
 // 북쪽이 위, x 증가가 오른쪽, z 증가가 아래. 한 칸=한 블록.
-export function renderLayerSvg(model, y, selection = { tower: 'all', material: 'all' }) {
+export function renderLayerSvg(model, y, selection = { tower: 'all', material: 'all', cell: CELL }) {
   if (!Number.isInteger(y)) {
     throw new RangeError(`도면 높이는 정수 상대 y이어야 한다: ${y}`);
   }
   const { min, max } = model.bounds;
+  const cell = Math.max(6, Math.min(48, Math.round(selection?.cell ?? CELL)));
+  const fs = cell / 12;
   const cols = max.x - min.x + 1;
   const rows = max.z - min.z + 1;
   const at = layerCells(model, y, selection);
@@ -68,37 +91,39 @@ export function renderLayerSvg(model, y, selection = { tower: 'all', material: '
   const span = at.size
     ? `가로 ${Math.max(...xs) - Math.min(...xs) + 1}칸 × 세로 ${Math.max(...zs) - Math.min(...zs) + 1}칸`
     : '둘 블록 없음';
-  const w = PAD_L + cols * CELL + PAD_R;
-  const h = PAD_T + rows * CELL + PAD_B;
+  const w = Math.round(PAD_L * fs + cols * cell + PAD_R * fs);
+  const h = Math.round(PAD_T * fs + rows * cell + PAD_B * fs);
+  const pl = Math.round(PAD_L * fs), pt = Math.round(PAD_T * fs);
+  const fT = Math.round(15 * fs), fB = Math.round(12 * fs), fS = Math.max(8, Math.round(9 * fs)), fG = Math.max(9, Math.round(8 * fs));
   let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" data-layer="${y}" role="img" aria-label="${y < 0 ? `토대 ${y}` : `높이 ${y + 1}`} 평면도">`;
-  s += `<text x="${PAD_L}" y="20" font-size="15" font-weight="bold">${y < 0 ? `토대 ${-y}단` : `${y + 1}층 설계도`}</text>`;
-  s += `<text x="${PAD_L}" y="40" font-size="12">위쪽이 북쪽 · 네모 한 칸이 블록 한 개 · ${span}</text>`;
-  s += `<text x="${PAD_L}" y="58" font-size="12">${parts.join(' · ') || '둘 블록 없음'}</text>`;
-  s += `<text x="${PAD_L}" y="76" font-size="12">색칠된 칸이 둘 칸, 빈 칸은 비우기 · 칸에 마우스를 올리면 블록 이름이 나온다</text>`;
+  s += `<text x="${pl}" y="${Math.round(20 * fs)}" font-size="${fT}" font-weight="bold">${y < 0 ? `토대 ${-y}단` : `${y + 1}층 설계도`}</text>`;
+  s += `<text x="${pl}" y="${Math.round(40 * fs)}" font-size="${fB}">위쪽이 북쪽 · 네모 한 칸이 블록 한 개 · ${span}</text>`;
+  s += `<text x="${pl}" y="${Math.round(58 * fs)}" font-size="${fB}">${parts.join(' · ') || '둘 블록 없음'}</text>`;
+  s += `<text x="${pl}" y="${Math.round(76 * fs)}" font-size="${fB}">색칠된 칸이 둘 칸, 빈 칸은 비우기 · 칸을 누르면 블록 이름이 나온다</text>`;
   // x 눈금
   for (let x = min.x; x <= max.x; x++) {
     if ((x - min.x) % 2 === 0) {
-      s += `<text x="${PAD_L + (x - min.x) * CELL + 1}" y="${PAD_T - 6}" font-size="9" fill="#555">${x}</text>`;
+      s += `<text x="${pl + (x - min.x) * cell + 1}" y="${pt - 6}" font-size="${fS}" fill="#555">${x}</text>`;
     }
   }
   for (let z = min.z; z <= max.z; z++) {
     const row = z - min.z;
     if (row % 2 === 0) {
-      s += `<text x="6" y="${PAD_T + row * CELL + 10}" font-size="9" fill="#555">${z}</text>`;
+      s += `<text x="6" y="${pt + row * cell + Math.round(10 * fs)}" font-size="${fS}" fill="#555">${z}</text>`;
     }
     for (let x = min.x; x <= max.x; x++) {
       const b = at.get(`${x},${z}`);
-      const px = PAD_L + (x - min.x) * CELL;
-      const py = PAD_T + row * CELL;
+      const px = pl + (x - min.x) * cell;
+      const py = pt + row * cell;
       if (!b) {
-        s += `<rect x="${px}" y="${py}" width="${CELL}" height="${CELL}" fill="none" stroke="#cccccc" stroke-width="0.5"/>`;
+        s += `<rect x="${px}" y="${py}" width="${cell}" height="${cell}" fill="none" stroke="#cccccc" stroke-width="0.5"/>`;
       } else {
         const sym = SYM[b.material] ?? '?';
         const nice = NICE[b.material] ?? b.material;
         s += `<g data-x="${b.x}" data-y="${b.y}" data-z="${b.z}" data-material="${esc(b.material)}" data-tower="${esc(b.tower)}">`;
         s += `<title>${nice} (${b.x}, ${b.y + 1}층, ${b.z})</title>`;
-        s += `<rect x="${px}" y="${py}" width="${CELL}" height="${CELL}" fill="${FILL[b.material]}" stroke="#333333" stroke-width="0.8"/>`;
-        s += `<text x="${px + CELL / 2}" y="${py + CELL / 2 + 3.5}" font-size="8" text-anchor="middle" fill="#111111">${sym}</text>`;
+        s += `<rect x="${px}" y="${py}" width="${cell}" height="${cell}" fill="${FILL[b.material]}" stroke="#333333" stroke-width="0.8"/>`;
+        s += `<text x="${px + cell / 2}" y="${py + cell / 2 + 3.5 * fs}" font-size="${fG}" text-anchor="middle" fill="#111111">${sym}</text>`;
         s += `</g>`;
       }
     }
@@ -206,20 +231,22 @@ export function renderBlueprintBook(model) {
   }
   s += `</ul>`;
   s += `<p>좌표는 블록 최소 모서리 정수 (x,y,z)다. x는 동쪽, z는 남쪽, y는 위쪽, 북쪽은 -z다. 건물 첫 블록은 y=0(표시 높이 1), 최고 y=${max.y}(표시 높이 ${max.y + 1})다. 지면 윗면은 y=0이다. 게임 Y = 선택한 기초 Y + 상대 y 로만 환산한다.</p>`;
-  s += `<p>출입구는 낮은 동 로컬 (x=5 또는 6, z=12, y=0 또는 1), 높은 동 로컬 (x=4 또는 5, z=14, y=0 또는 1)의 4블록씩을 뺀 개방 출입구다. 문 아이템을 설치하지 않는다. 넓은 공통 기단, 내부 층 바닥, 상설 계단, 가구는 만들지 않는다.</p>`;
+  s += `<p>출입구는 낮은 동 로컬 (x=5 또는 6, z=11, y=0 또는 1), 높은 동 로컬 (x=5 또는 6, z=12, y=0 또는 1)의 4블록씩을 뺀 개방 출입구다. 문 아이템을 설치하지 않는다. 넓은 공통 기단, 내부 층 바닥, 상설 계단, 가구는 만들지 않는다.</p>`;
   s += `<p>설계 근거 원문: <a href="https://m.blog.naver.com/sciencehahn/222157399308">엘시티 마인크래프트 도면 원문</a>. 낮은 두 동은 시공 단순화를 위해 의도적으로 같은 단면과 높이를 사용한다.</p>`;
   s += `<h2>전체 및 동별 재료표</h2>${materialTable(rows)}`;
   s += `<h2>입면도</h2>`;
   for (const d of ['north', 'south', 'east', 'west']) {
     s += `<div class="sheet">${renderElevationSvg(model, d)}</div>`;
   }
-  s += `<h2>높이별 평면도 1..${max.y + 1}</h2><p>반복층을 생략하지 않고 전 높이를 싣는다. 각 장은 정확히 그 높이만 표시한다.</p>`;
-  for (let y = 0; y <= max.y; y++) {
+  s += `<h2>높이별 평면도</h2><p>모양이 바뀌는 높이만 싣는다(반복층 생략). 각 장은 그 높이의 모양대로 쌓으면 된다.</p>`;
+  for (const { y, through } of distinctLayers(model).filter(({ y }) => y >= 0)) {
+    const repeat = through - y - 1;
     const towersHere = model.towers
       .filter((t) => y < t.height)
       .map((t) => `${esc(t.name)} ${t.height}중 높이 ${y + 1}`)
       .join(' · ');
-    s += `<div class="sheet"><details open><summary>높이 ${y + 1} — ${towersHere}</summary>${renderLayerSvg(model, y)}</details></div>`;
+    const span = repeat > 0 ? ` — 높이 ${y + 1}부터 ${through}까지 ${repeat + 1}층 같은 모양` : '';
+    s += `<div class="sheet"><details open><summary>높이 ${y + 1}${span} — ${towersHere}</summary>${renderLayerSvg(model, y)}</details></div>`;
   }
   // towerNames는 표지 동 이름 해석용으로 유지한다.
   void towerNames;
