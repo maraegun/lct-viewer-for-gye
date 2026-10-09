@@ -102,24 +102,31 @@ function isCrown(key) {
 
 const L = sectionL();
 const H = sectionH();
-// 윗몸통 U: 원본 B-16(가는 Y자) 절반축소. 줄기 2열 + 밑면.
+// 윗몸통 U: 원본 B-15 몸통(rows 15-27) 절반축소. 안산암 2기둥 + 가운데 홈.
 // H의 z0-8이 아니라 별도 단면이다.
 const U = new Set();
-for (let y = 0; y <= 6; y++) { U.add(`5,${y}`); U.add(`7,${y}`); }
-for (const x of [4, 5, 6, 7, 8]) U.add(`${x},7`);
-for (const x of [4, 5, 8]) U.add(`${x},8`);
+for (const [y, xs] of [
+  [0, [4, 5, 6, 9, 10, 11]],
+  [1, [4, 5, 6, 8, 9, 10]],
+  [2, [4, 5, 6, 8, 9, 10]],
+  [3, [5, 6, 8, 9, 10]],
+  [4, [5, 6, 8, 9, 10]],
+  [5, [4, 5, 6, 8, 9, 10]],
+  [6, [4, 5, 6, 9, 10, 11]],
+] ) {
+  for (const x of xs) U.add(`${x},${y}`);
+}
 const RIM_L = rim(L);
 const RIM_H = rim(H);
 const RIM_U = rim(U);
 const CROWN_L = new Set([...RIM_L].filter(isCrown));
 const CROWN_U = new Set([...RIM_U].filter(isCrown));
-// 높은동 꼭대기: 원본 B-15 뿔(두 갈래) 절반축소. 아래는 이어지고 위로 갈라진다.
+// 높은동 꼭대기: 원본 B-15 뿔(두 갈래) 절반축소. 윗몸통 너비에 맞춘다.
 const CROWN_HU_LO = new Set([
-  '2,0', '3,0', '4,0', '5,0', '6,0', '7,0', '10,0', '11,0', '12,0',
-  '1,1', '2,1', '3,1', '4,1', '6,1', '8,1', '9,1', '10,1', '11,1', '12,1',
-  '2,2', '3,2', '4,2', '8,2', '9,2', '10,2', '11,2',
+  '4,0', '5,0', '6,0', '9,0', '10,0', '11,0',
+  '4,1', '5,1', '6,1', '8,1', '9,1', '10,1', '11,1',
+  '4,2', '5,2', '6,2', '9,2', '10,2', '11,2',
 ]);
-const CROWN_HU_HI = new Set(['2,0', '3,0', '4,0', '8,0', '9,0', '10,0', '11,0']);
 // 내벽: 외피 안쪽에 닿은 내부 칸 (원본 B 도면의 검은 양털 한 겹).
 function innerWall(cells, shell) {
   const out = new Set();
@@ -204,7 +211,7 @@ function layerShape(towerId, y, towerHeight) {
     if (y < shoulder) return { kind: 'shell', cells: RIM_H, inner: INNER_H, ring: ringFor(towerId, y, towerHeight) };
     if (y === shoulder) return { kind: 'roof', cells: H };
     if (y < shoulder + 8) return { kind: 'shell', cells: RIM_U, inner: INNER_U, ring: GLASS };
-    if (y === shoulder + 8) return { kind: 'roof', cells: H };
+    if (y === shoulder + 8) return { kind: 'roof', cells: U };
     // 뿔 3층. B-15 절반축소 모양 그대로 쌓는다.
     return { kind: 'roof', cells: CROWN_HU_LO };
   }

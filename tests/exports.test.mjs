@@ -12,7 +12,7 @@ import {
 test('CSV 왕복 집합이 모델과 같고 재료표가 블록에서 재집계한 값과 같다', () => {
   const model = buildModel();
   const rows = parseBlocksCsv(serializeBlocksCsv(model));
-  assert.equal(rows.length, 16791);
+  assert.equal(rows.length, 16846);
   const a = new Set(model.blocks.map((b) => `${b.x},${b.y},${b.z},${b.material},${b.tower}`));
   const b = new Set(rows.map((r) => `${r.x},${r.y},${r.z},${r.material},${r.tower}`));
   assert.deepEqual(b, a);
