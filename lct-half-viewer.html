@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>엘시티 절반 모형 보기</title>
+<style>
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+body {
+  font-family: system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  margin: 0; color: #1c2430; background: #eef2f6; line-height: 1.6;
+}
+main { max-width: 1240px; margin: 0 auto; padding: 28px 22px 56px; }
+.hero { margin-bottom: 14px; }
+.hero h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: -0.5px; }
+.hero p { margin: 0; color: #546074; font-size: 15px; max-width: 70ch; }
+.toolbar {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 16px;
+  padding: 12px 14px; margin: 14px 0; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+.toolbar .group { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.toolbar .sep { width: 1px; height: 26px; background: #e2e8f0; }
+button {
+  border: 1px solid #cbd5e1; background: #fff; border-radius: 999px;
+  padding: 8px 15px; font-size: 14px; cursor: pointer; color: #1c2430;
+}
+button:hover { background: #f1f5f9; }
+button.primary { background: #1d4ed8; border-color: #1d4ed8; color: #fff; font-weight: 700; }
+button.primary:hover { background: #1e40af; }
+select, input[type="number"] {
+  font-size: 14px; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff;
+}
+input[type="range"] { width: 160px; accent-color: #1d4ed8; }
+details.plain { border: 0; padding: 0; margin: 0; }
+details.plain summary { cursor: pointer; font-size: 13px; color: #546074; }
+.hint { color: #64748b; font-size: 13px; margin: 6px 0 0; }
+#status-line {
+  display: inline-block; font-size: 14px; color: #0f172a; font-weight: 700;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 999px;
+  padding: 6px 14px; margin: 10px 2px;
+}
+.layout { display: grid; grid-template-columns: 2.2fr 1fr; gap: 16px; align-items: start; }
+.card {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 16px;
+  padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+.card h2 { font-size: 16px; margin: 0 0 10px; }
+.card p { font-size: 14px; color: #374151; }
+#stage { width: 100%; height: 560px; border-radius: 12px; overflow: hidden; position: relative; background: linear-gradient(#8ec7f0, #bfe3f7 70%, #cfe9c9); }
+#stage canvas { position: absolute; inset: 0; cursor: grab; }
+#pick-info {
+  display: flex; align-items: center; gap: 10px; font-size: 14px;
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;
+  min-height: 2.4em; margin: 12px 0 0; padding: 8px 12px;
+}
+#layer-panel svg { max-width: 100%; height: auto; border-radius: 8px; }
+#layer-panel { max-height: 460px; overflow: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { border-bottom: 1px solid #eef2f7; padding: 9px 6px; text-align: left; vertical-align: middle; }
+tbody tr:hover { background: #f8fafc; }
+th { color: #64748b; font-weight: 600; font-size: 13px; }
+td small { color: #64748b; }
+#notice { background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 10px 12px; margin: 12px 0; }
+@media (max-width: 920px) {
+  .layout { grid-template-columns: 1fr; }
+  #stage { height: 400px; }
+  input[type="range"] { width: 120px; }
+}
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "./node_modules/three/build/three.module.js",
+    "three/addons/": "./node_modules/three/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<main>
+<div class="hero">
+<h1>엘시티 절반 모형</h1>
+<p>실제 크기의 절반으로 줄인 세 건물 모형이다. 돌려 보고, 층을 나누고, 쌓이는 모습을 볼 수 있다.</p>
+</div>
+
+<div class="toolbar">
+<div class="group" role="group" aria-label="보기">
+<button id="btn-home" class="primary" type="button">처음 화면</button>
+<button id="btn-build" type="button">처음부터 쌓기</button>
+<label><input type="checkbox" id="podium-toggle" checked> 토대 보기</label>
+</div>
+<div class="sep"></div>
+<div class="group" role="group" aria-label="건물 높이">
+<span class="hint">높이:</span>
+<button type="button" data-heights="56,72">원래대로</button>
+<button type="button" data-heights="40,56">조금 낮게</button>
+<button type="button" data-heights="28,40">많이 낮게</button>
+<button type="button" data-heights="16,24">아주 낮게</button>
+</div>
+<div class="group" role="group" aria-label="층 고르기">
+<button id="layer-jump-prev" type="button" aria-label="모양이 바뀌는 아래층으로">◀ 모양 바뀜</button>
+<button id="layer-prev" type="button" aria-label="한 층 아래로">아래층</button>
+<input id="layer-range" type="range" min="1" max="72" value="72" step="1" aria-label="층 막대">
+<input id="layer-num" type="number" min="1" max="72" value="72" aria-label="층 숫자">
+<button id="layer-next" type="button" aria-label="한 층 위로">위층</button>
+<button id="layer-jump-next" type="button" aria-label="모양이 바뀌는 위층으로">모양 바뀜 ▶</button>
+<label><input type="radio" name="cut" value="all" checked> 전부</label>
+<label><input type="radio" name="cut" value="only"> 이 층만</label>
+<label><input type="radio" name="cut" value="through"> 여기까지</label>
+</div>
+<div class="sep"></div>
+<div class="group" role="group" aria-label="더 고르기">
+<details class="plain">
+<summary>건물·블록·높이 더 고르기</summary>
+<label>건물 <select id="tower">
+<option value="all">세 건물 다</option>
+<option value="low1">낮은 건물 1</option>
+<option value="low2">낮은 건물 2</option>
+<option value="high">높은 건물</option>
+</select></label>
+<label>블록 <select id="material">
+<option value="all">다 보기</option>
+<option value="glass">파란 유리만</option>
+<option value="sky">하늘 유리만</option>
+<option value="gray">회색 유리만</option>
+<option value="andesite">회색 돌만</option>
+<option value="rock">흰 블록만</option>
+<option value="wool">검은 블록만</option>
+</select></label>
+<label>낮은 건물 높이 <input id="height-low" type="range" min="10" max="56" value="56" step="1"> <input id="height-low-num" type="number" min="10" max="56" value="56"></label>
+<label>높은 건물 높이 <input id="height-high" type="range" min="10" max="72" value="72" step="1"> <input id="height-high-num" type="number" min="10" max="72" value="72"></label>
+<button id="height-reset" type="button">원래대로</button>
+</details>
+</div>
+<p class="hint">왼쪽을 눌러 돌리고, 휠로 가까이·멀리, 오른쪽을 눌러 움직인다. ↑↓키로 한 층씩 오르내린다.</p>
+<p id="status-line"></p>
+<p class="hint" id="build-status"></p>
+
+<div id="notice" hidden></div>
+
+<div class="layout">
+<div class="card">
+<h2>모형</h2>
+<div id="stage" aria-label="입체 블록 모형"></div>
+<p id="pick-info">보고 싶은 블록을 화면에서 눌러 보세요.</p>
+<p><button id="btn-clear-pick" type="button">고른 것 지우기</button></p>
+</div>
+<div>
+<section class="card" aria-label="층 설계도"><h2>층 설계도</h2><div id="layer-panel"></div></section>
+<section class="card" aria-label="필요한 블록"><h2>필요한 블록</h2><div id="material-panel"></div></section>
+</div>
+</div>
+</main>
+
+<script type="module" src="./src/app.mjs"></script>
+</body>
+</html>

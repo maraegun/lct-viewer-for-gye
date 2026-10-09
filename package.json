@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "three": "0.180.0"
+  },
+  "scripts": {
+    "generate": "node scripts/export.mjs",
+    "start": "python3 -m http.server 4173 --bind 127.0.0.1",
+    "test": "node --test tests/*.test.mjs",
+    "verify:model": "node scripts/verify-model.mjs"
+  },
+  "type": "module"
+}
