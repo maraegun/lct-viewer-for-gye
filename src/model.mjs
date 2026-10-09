@@ -151,12 +151,12 @@ function isEntrance(towerId, x, y, z) {
 }
 
 // 높이를 줄이면 몸통만 짧아지고 지붕·꼭대기 모양은 그대로 둔다.
-// 낮은 건물: 꼭대기 6(지붕 1 + 갈래 5), 높은 건물: 어깨지붕 1 + 윗몸통 7 + 상부지붕 1 + 꼭대기 8 = 17.
+// 낮은 건물: 꼭대기 6(지붕 1 + 갈래 5), 높은 건물: 어깨지붕 1 + 윗몸통 7 + 상부지붕 1 + 꼭대기 3 = 12.
 function splitLow(height) {
   return { crown: height - 6 };
 }
 function splitHigh(height) {
-  return { shoulder: height - 17 };
+  return { shoulder: height - 12 };
 }
 // 층별 외벽 재료 (원본 B/C 도면 대조).
 // 낮은동 = B동 19구간 × 3블록, 높은동 = C동 8구간 × 9블록.
@@ -205,9 +205,8 @@ function layerShape(towerId, y, towerHeight) {
     if (y === shoulder) return { kind: 'roof', cells: H };
     if (y < shoulder + 8) return { kind: 'shell', cells: RIM_U, inner: INNER_U, ring: GLASS };
     if (y === shoulder + 8) return { kind: 'roof', cells: H };
-    // 뿔 아래 3층은 이어지고 위 5층은 두 갈래로 갈라진다.
-    if (y < shoulder + 12) return { kind: 'roof', cells: CROWN_HU_LO };
-    return { kind: 'roof', cells: CROWN_HU_HI };
+    // 뿔 3층. B-15 절반축소 모양 그대로 쌓는다.
+    return { kind: 'roof', cells: CROWN_HU_LO };
   }
   const { crown } = splitLow(towerHeight);
   if (y < crown) return { kind: 'shell', cells: RIM_L, inner: INNER_L, ring: ringFor(towerId, y, towerHeight) };

@@ -44,16 +44,16 @@ test('정상 모델은 총량·재료 분할·동별 연결을 만족한다', ()
   const model = buildModel();
   const result = validateModel(model);
   assert.equal(result.ok, true, JSON.stringify(result.errors.slice(0, 5)));
-  assert.equal(result.stats.total, 16396);
+  assert.equal(result.stats.total, 16791);
   assert.equal(result.stats.byTower.low1, 4512);
   assert.equal(result.stats.byTower.low2, 4512);
-  assert.equal(result.stats.byTower.high, 5173);
-  assert.equal(result.stats.byMaterial[GLASS], 2695);
-  assert.equal(result.stats.byMaterial[SKY], 3326);
+  assert.equal(result.stats.byTower.high, 5568);
+  assert.equal(result.stats.byMaterial[GLASS], 2842);
+  assert.equal(result.stats.byMaterial[SKY], 3375);
   assert.equal(result.stats.byMaterial[GRAY], 1333);
-  assert.equal(result.stats.byMaterial[ANDESITE], 3153);
+  assert.equal(result.stats.byMaterial[ANDESITE], 3202);
   assert.equal(result.stats.byMaterial[DIORITE], 1938);
-  assert.equal(result.stats.byMaterial[WOOL], 3951);
+  assert.equal(result.stats.byMaterial[WOOL], 4101);
   // 높이 범위 명시 확인
   for (const b of model.blocks) {
     assert.ok(Number.isInteger(b.x) && Number.isInteger(b.y) && Number.isInteger(b.z));
@@ -89,10 +89,10 @@ test('지붕과 꼭대기 경계 높이를 확인한다', () => {
   // 낮은 동 1: y=50 지붕은 내부 포함 전면 섬록암, y=51 꼭대기 시작
   assert.equal(at.get('5,50,8')?.material, DIORITE);
   // 높은 동: y=55 어깨 지붕, y=56 상부 몸통, y=63 상부 지붕, y=64 꼭대기
-  assert.equal(at.get('45,55,18')?.material, DIORITE);
-  assert.ok(at.get('45,56,18'), 'y=56 상부 몸통 필요');
-  assert.equal(at.get('45,63,18')?.material, DIORITE);
-  assert.ok(at.get('42,64,10'), 'y=64 꼭대기 필요');
+  assert.equal(at.get('45,60,18')?.material, DIORITE);
+  assert.ok(at.get('45,61,18'), 'y=61 윗몸통 필요');
+  assert.equal(at.get('45,68,18')?.material, DIORITE);
+  assert.ok(at.get('42,69,10'), 'y=69 꼭대기 필요');
   // y=72에는 모델 블록이 없다
   assert.ok(!model.blocks.some((b) => b.y === 72), 'y=72 블록 없음');
 });
@@ -126,5 +126,5 @@ test('층 선택 경계와 필터 교집합이 동작한다', () => {
   assert.ok(selectBlocks(model, { layer: -3 }).length > 0);
   // 최대 초과 정상 정수: 단층 빈 배열, 누적 전체 반환
   assert.equal(selectBlocks(model, { layer: 999 }).length, 0);
-  assert.equal(selectBlocks(model, { layer: 999, through: true }).length, 16396);
+  assert.equal(selectBlocks(model, { layer: 999, through: true }).length, 16791);
 });

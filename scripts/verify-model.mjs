@@ -2,16 +2,16 @@ import { buildModel, validateModel } from '../src/model.mjs';
 
 // 원본 B-1 절반축소 대조 후: 내벽(검은 양털) + 밑면 돌출. 2026-10-09 갱신 수치.
 const EXPECTED = {
-  total: 16396,
+  total: 16791,
   low1: 4512,
   low2: 4512,
-  high: 5173,
-  glass: 2695,
+  high: 5568,
+  glass: 2842,
   diorite: 1938,
-  wool: 3951,
-  sky: 3326,
+  wool: 4101,
+  sky: 3375,
   gray: 1333,
-  andesite: 3153,
+  andesite: 3202,
 };
 
 const model = buildModel();
@@ -81,4 +81,4 @@ if (fail.length) {
   console.error(`실패 ${fail.length}개: ${fail.join(', ')}`);
   process.exit(1);
 }
-console.log('모델 가능성 검증 통과: 16396블록, 설치 가능, 동별 단일 연결.');
+console.log('모델 가능성 검증 통과: 16791블록, 설치 가능, 동별 단일 연결.');
