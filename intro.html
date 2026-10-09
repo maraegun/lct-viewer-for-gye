@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>엘시티 절반 모형 뷰어 소개</title>
+<style>
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+body { font-family: system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; margin: 0; color: #1c2430; background: #eef2f6; line-height: 1.7; }
+main { max-width: 860px; margin: 0 auto; padding: 32px 22px 64px; }
+h1 { font-size: 28px; margin: 0 0 8px; letter-spacing: -0.5px; }
+.lead { font-size: 16px; color: #374151; }
+.btns { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 24px; }
+.btns a { display: inline-block; border-radius: 999px; padding: 10px 22px; font-size: 15px; font-weight: 700; text-decoration: none; }
+.btns a.primary { background: #1d4ed8; color: #fff; }
+.btns a.sub { background: #fff; color: #1c2430; border: 1px solid #cbd5e1; }
+figure.card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px; margin: 0 0 16px; box-shadow: 0 1px 3px rgba(15,23,42,.05); }
+figure.card img { width: 100%; height: auto; border-radius: 12px; border: 1px solid #e2e8f0; }
+figcaption { font-size: 14px; color: #546074; margin-top: 8px; }
+ul { padding-left: 20px; }
+.copybox { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px 18px; }
+.copybox pre { white-space: pre-wrap; font-family: inherit; font-size: 15px; margin: 0 0 12px; }
+#copy-btn { border: 1px solid #cbd5e1; background: #fff; border-radius: 999px; padding: 8px 18px; font-size: 14px; cursor: pointer; }
+#copy-btn:hover { background: #f1f5f9; }
+footer { font-size: 13px; color: #64748b; margin-top: 24px; }
+footer a { color: #1d4ed8; }
+</style>
+</head>
+<body>
+<main>
+<h1>엘시티 절반 모형 뷰어</h1>
+<p class="lead">부산 해운대 엘시티를 마인크래프트에 절반 크기로 지을 수 있게 정리한 브라우저 도면집입니다.</p>
+<div class="btns">
+<a class="primary" href="./lct-half-viewer.html">입체 모형 열기</a>
+<a class="sub" href="./lct-drawings.html">층 설계도 열기</a>
+</div>
+<figure class="card">
+<img src="./assets/intro-3d.png" alt="세 건물 입체 모형 미리보기">
+<figcaption>입체 모형 — 돌려 보고, 층을 나누고, 쌓이는 모습을 볼 수 있습니다.</figcaption>
+</figure>
+<figure class="card">
+<img src="./assets/intro-draw.png" alt="1층 설계도 미리보기">
+<figcaption>층 설계도 — 모양이 바뀌는 22장만 추렸고, 칸을 누르면 블록 이름·좌표가 나옵니다.</figcaption>
+</figure>
+<div class="copybox">
+<pre id="copy-text">엘시티 절반 모형 뷰어 만들었습니다.
+
+부산 해운대 엘시티를 마인크래프트에 절반 크기로 지을 수 있게 정리한 브라우저 도면집입니다. 사한님 설계(바닥 51×105, 최고 143블록)를 PDF 도면까지 한 칸씩 대조해 절반(53×25×75, 17,071블록)으로 옮겼습니다.
+
+입체 모형 돌려보기: https://maraegun.github.io/lct-viewer-for-gye/
+층 설계도 크게 보기(같은 주소에서 연결)도 있습니다.
+
+- 모양 바뀌는 22장만 추린 층 설계도 + 블록 클릭하면 이름·좌표 표시
+- 필요한 블록 표(묶음 계산 포함) — 재료 준비용
+- 토대 포함, 출입구·내벽·지붕·뿔까지 반영
+
+원본 설계: 사한의 설계실 — 마인크래프트 엘시티 lct (2020-11-29)
+https://m.blog.naver.com/sciencehahn/222157399308</pre>
+<button id="copy-btn" type="button">소개글 복사</button>
+</div>
+<footer>원본 설계: <a href="https://m.blog.naver.com/sciencehahn/222157399308" target="_blank" rel="noopener">사한의 설계실 — 마인크래프트 엘시티 lct (2020-11-29)</a></footer>
+</main>
+<script>
+document.getElementById('copy-btn').addEventListener('click', async () => {
+  const text = document.getElementById('copy-text').textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    document.getElementById('copy-btn').textContent = '복사됨 ✓';
+  } catch {
+    const r = document.createRange();
+    r.selectNodeContents(document.getElementById('copy-text'));
+    const s = getSelection();
+    s.removeAllRanges();
+    s.addRange(r);
+    document.getElementById('copy-btn').textContent = '드래그 복사해 주세요';
+  }
+});
+</script>
+</body>
+</html>
