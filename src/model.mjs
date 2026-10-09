@@ -224,7 +224,8 @@ function layerShape(towerId, y, towerHeight) {
 
 export const PODIUM = {
   // 토대(기단): 원본 A-2 기단 절반축소. 서쪽 좁고 동쪽 넓으며 양끝은 직선,
-  // 꺾임은 북·남 변 중간 4곳의 계단식 전이구간에만 있다. 원본처럼 테두리 1겹만 둔다.
+  // 꺾임은 북·남 변 중간 4곳의 계단식 전이구간에만 있다. 외곽선은 A-2 그대로고
+  // 속은 받침으로 채운다(원본은 테두리 1겹만 그려 있다).
   // y -3..-1 (건물 1층 아래), 윤나는 안산암.
   depth: 3,
 };
@@ -238,6 +239,40 @@ const PODIUM_ROWS = [
   [[18, 34], [52, 52]], [[34, 36], [52, 52]], [[36, 38], [52, 52]], [[38, 40], [52, 52]],
   [[40, 52]],
 ];
+// 건물 1층 발밑 칸: 테두리와 별개로 받침을 깔아 발이 밖에 뜨지 않게 한다.
+function towerBaseCells() {
+  const set = new Set();
+  for (const t of TOWERS) {
+    const { cells, inner } = layerShape(t.id, 0, t.height);
+    for (const key of cells) {
+      const [lx, lz] = key.split(',').map(Number);
+      set.add(`${t.origin.x + lx},${t.origin.z + lz}`);
+    }
+    if (inner) {
+      for (const key of inner) {
+        const [lx, lz] = key.split(',').map(Number);
+        set.add(`${t.origin.x + lx},${t.origin.z + lz}`);
+      }
+    }
+    for (let lx = -2; lx < 16; lx++) {
+      for (let lz = -2; lz < 18; lz++) {
+        if (isEntrance(t.id, lx, 0, lz)) set.add(`${t.origin.x + lx},${t.origin.z + lz}`);
+      }
+    }
+  }
+  return set;
+}
+// 토대 전체 칸: A-2 테두리 + 건물 발밑. y -3..-1에 같은 모양으로 3층 쌓는다.
+const PODIUM_CELLS = (() => {
+  const set = new Set();
+  PODIUM_ROWS.forEach((ranges, r) => {
+    for (const [a, b] of ranges) {
+      for (let x = a; x <= b; x++) set.add(`${x},${r}`);
+    }
+  });
+  for (const key of towerBaseCells()) set.add(key);
+  return set;
+})();
 export function buildModel(heights = {}, { podium = true } = {}) {
   const blocks = [];
   const towers = TOWERS.map((t) => {
@@ -281,7 +316,7 @@ export function buildModel(heights = {}, { podium = true } = {}) {
       }
     }
   }
-  // 토대: A-2 half 테두리 그대로 (x0..52, z0..24), y -3..-1. 속은 비운다.
+  // 토대: A-2 half 외곽선 + 건물 발밑 받침 (x0..52, z0..24), y -3..-1.
   let podiumInfo = null;
   if (podium) {
     podiumInfo = {
@@ -290,12 +325,9 @@ export function buildModel(heights = {}, { podium = true } = {}) {
       material: ANDESITE,
     };
     for (let y = podiumInfo.y0; y <= podiumInfo.y1; y++) {
-      for (let r = 0; r < PODIUM_ROWS.length; r++) {
-        for (const [a, b] of PODIUM_ROWS[r]) {
-          for (let x = a; x <= b; x++) {
-            blocks.push({ x, y, z: r, material: ANDESITE, tower: 'podium' });
-          }
-        }
+      for (const key of PODIUM_CELLS) {
+        const [x, z] = key.split(',').map(Number);
+        blocks.push({ x, y, z, material: ANDESITE, tower: 'podium' });
       }
     }
   }
@@ -544,7 +576,7 @@ export function validateModel(model) {
     }
     const info = model?.podium;
     if (info) {
-      const perLayer = PODIUM_ROWS.reduce((n, ranges) => n + ranges.reduce((m, [a, b]) => m + (b - a + 1), 0), 0);
+      const perLayer = PODIUM_CELLS.size;
       const expected = perLayer * (info.y1 - info.y0 + 1);
       if (podiumBlocks.length !== expected) {
         errors.push(err('podium-incomplete', `토대가 ${podiumBlocks.length}개로 꽉 차지 않았다(기대 ${expected}).`, {
