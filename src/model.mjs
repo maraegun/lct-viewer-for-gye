@@ -212,26 +212,31 @@ function layerShape(towerId, y, towerHeight) {
     if (y === shoulder) return { kind: 'roof', cells: H };
     if (y < shoulder + 8) return { kind: 'shell', cells: RIM_U, inner: INNER_U, ring: GLASS };
     if (y === shoulder + 8) return { kind: 'roof', cells: U };
-    // 뿔 3층. B-15 절반축소 모양 그대로 쌓는다.
-    return { kind: 'roof', cells: CROWN_HU_LO };
+    // 뿔 3층. B-15 절반축소 모양 그대로 쌓는다. 끝만 청록 유리(원본 B-15 봉우리 끝).
+    return { kind: 'crown', cells: CROWN_HU_LO };
   }
   const { crown } = splitLow(towerHeight);
   if (y < crown) return { kind: 'shell', cells: RIM_L, inner: INNER_L, ring: ringFor(towerId, y, towerHeight) };
   if (y === crown) return { kind: 'roof', cells: L };
-  return { kind: 'roof', cells: CROWN_L };
+  // 갈래 5층. 끝만 청록 유리(원본 B-15 봉우리 끝), 흰 테두리는 그대로.
+  return { kind: 'crown', cells: CROWN_L };
 }
 
 export const PODIUM = {
-  // 토대(기단): 원본 A-2 기단 절반축소 (위 좁고 아래 넓다가 좌측이 대각선).
-  // 건물 배치를 덮도록 원점을 맞춘다. y -3..-1 (건물 1층 아래), 윤나는 안산암.
+  // 토대(기단): 원본 A-2 기단 절반축소. 서쪽 좁고 동쪽 넓으며 양끝은 직선,
+  // 꺾임은 북·남 변 중간 4곳의 계단식 전이구간에만 있다. 원본처럼 테두리 1겹만 둔다.
+  // y -3..-1 (건물 1층 아래), 윤나는 안산암.
   depth: 3,
 };
-// A-2 half rows (y0-24): [x0, x1] 구간. 건물 외접에 맞춰 평행이동한다.
+// A-2 half rows (z0-24): 각 행의 [x0, x1] 구간 목록. 서쪽(x0) z7..16, 동쪽(x52) z0..24.
 const PODIUM_ROWS = [
-  [0, 14], [0, 15], [0, 17], [0, 18], [0, 32], [0, 33], [0, 34],
-  [0, 35], [0, 36], [0, 37], [0, 52], [0, 52], [0, 52],
-  [14, 52], [16, 52], [17, 52], [19, 52],
-  [32, 52], [33, 52], [34, 52], [34, 52], [35, 52], [36, 52], [36, 52], [37, 52],
+  [[38, 52]], [[36, 38], [52, 52]], [[34, 36], [52, 52]], [[18, 34], [52, 52]],
+  [[16, 18], [52, 52]], [[14, 16], [52, 52]], [[12, 14], [52, 52]], [[0, 12], [52, 52]],
+  [[0, 0], [52, 52]], [[0, 0], [52, 52]], [[0, 0], [52, 52]], [[0, 0], [52, 52]],
+  [[0, 0], [52, 52]], [[0, 0], [52, 52]], [[0, 0], [52, 52]], [[0, 0], [52, 52]],
+  [[0, 12], [52, 52]], [[12, 14], [52, 52]], [[14, 16], [52, 52]], [[16, 18], [52, 52]],
+  [[18, 34], [52, 52]], [[34, 36], [52, 52]], [[36, 38], [52, 52]], [[38, 40], [52, 52]],
+  [[40, 52]],
 ];
 export function buildModel(heights = {}, { podium = true } = {}) {
   const blocks = [];
@@ -247,8 +252,11 @@ export function buildModel(heights = {}, { podium = true } = {}) {
       for (const key of cells) {
         const [lx, lz] = key.split(',').map(Number);
         if (isEntrance(tower.id, lx, y, lz)) continue;
+        // 지붕·갈래층은 섬록암, 갈래(crown) 끝은 청록 유리. 흰 테두리는 그대로 둔다.
         const material =
-          kind === 'roof' || TRIM.has(key) ? DIORITE : (ring ?? GLASS);
+          kind === 'crown'
+            ? (TRIM.has(key) ? DIORITE : GLASS)
+            : kind === 'roof' || TRIM.has(key) ? DIORITE : (ring ?? GLASS);
         blocks.push({
           x: tower.origin.x + lx,
           y,
@@ -273,7 +281,7 @@ export function buildModel(heights = {}, { podium = true } = {}) {
       }
     }
   }
-  // 토대: A-2 half 모양 그대로 (x0..52, z0..24), y -3..-1. 건물 외접과 일치한다.
+  // 토대: A-2 half 테두리 그대로 (x0..52, z0..24), y -3..-1. 속은 비운다.
   let podiumInfo = null;
   if (podium) {
     podiumInfo = {
@@ -283,9 +291,10 @@ export function buildModel(heights = {}, { podium = true } = {}) {
     };
     for (let y = podiumInfo.y0; y <= podiumInfo.y1; y++) {
       for (let r = 0; r < PODIUM_ROWS.length; r++) {
-        const [a, b] = PODIUM_ROWS[r];
-        for (let x = a; x <= b; x++) {
-          blocks.push({ x, y, z: r, material: ANDESITE, tower: 'podium' });
+        for (const [a, b] of PODIUM_ROWS[r]) {
+          for (let x = a; x <= b; x++) {
+            blocks.push({ x, y, z: r, material: ANDESITE, tower: 'podium' });
+          }
         }
       }
     }
@@ -535,7 +544,7 @@ export function validateModel(model) {
     }
     const info = model?.podium;
     if (info) {
-      const perLayer = PODIUM_ROWS.reduce((n, [a, b]) => n + (b - a + 1), 0);
+      const perLayer = PODIUM_ROWS.reduce((n, ranges) => n + ranges.reduce((m, [a, b]) => m + (b - a + 1), 0), 0);
       const expected = perLayer * (info.y1 - info.y0 + 1);
       if (podiumBlocks.length !== expected) {
         errors.push(err('podium-incomplete', `토대가 ${podiumBlocks.length}개로 꽉 차지 않았다(기대 ${expected}).`, {

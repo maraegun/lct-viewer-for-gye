@@ -44,15 +44,15 @@ test('정상 모델은 총량·재료 분할·동별 연결을 만족한다', ()
   const model = buildModel();
   const result = validateModel(model);
   assert.equal(result.ok, true, JSON.stringify(result.errors.slice(0, 5)));
-  assert.equal(result.stats.total, 16846);
+  assert.equal(result.stats.total, 15103);
   assert.equal(result.stats.byTower.low1, 4512);
   assert.equal(result.stats.byTower.low2, 4512);
   assert.equal(result.stats.byTower.high, 5623);
-  assert.equal(result.stats.byMaterial[GLASS], 2940);
+  assert.equal(result.stats.byMaterial[GLASS], 3111);
   assert.equal(result.stats.byMaterial[SKY], 3375);
   assert.equal(result.stats.byMaterial[GRAY], 1333);
-  assert.equal(result.stats.byMaterial[ANDESITE], 3202);
-  assert.equal(result.stats.byMaterial[DIORITE], 1846);
+  assert.equal(result.stats.byMaterial[ANDESITE], 1459);
+  assert.equal(result.stats.byMaterial[DIORITE], 1675);
   assert.equal(result.stats.byMaterial[WOOL], 4150);
   // 높이 범위 명시 확인
   for (const b of model.blocks) {
@@ -104,7 +104,8 @@ test('층 선택 경계와 필터 교집합이 동작한다', () => {
   assert.deepEqual(summarizeMaterials(empty).map((s) => s.count), [0, 0, 0, 0, 0, 0]);
   const crown = selectBlocks(model, { tower: 'high', layer: 71 });
   assert.ok(crown.length > 0);
-  assert.ok(crown.every((b) => b.material === DIORITE), '높이 72는 흰 꼭대기만');
+  assert.ok(crown.every((b) => b.material === GLASS || b.material === DIORITE), '높이 72는 유리 끝+흰 테두리만');
+  assert.ok(crown.some((b) => b.material === GLASS), '원본 B-15처럼 갈래 끝은 유리');
   const through = selectBlocks(model, { tower: 'high', layer: 2, through: true });
   assert.ok(through.every((b) => b.y <= 2));
   assert.equal(
@@ -126,5 +127,5 @@ test('층 선택 경계와 필터 교집합이 동작한다', () => {
   assert.ok(selectBlocks(model, { layer: -3 }).length > 0);
   // 최대 초과 정상 정수: 단층 빈 배열, 누적 전체 반환
   assert.equal(selectBlocks(model, { layer: 999 }).length, 0);
-  assert.equal(selectBlocks(model, { layer: 999, through: true }).length, 16846);
+  assert.equal(selectBlocks(model, { layer: 999, through: true }).length, 15103);
 });
