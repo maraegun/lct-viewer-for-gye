@@ -21,9 +21,13 @@ input[type="range"] { width: 220px; accent-color: #1d4ed8; }
 .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05); }
 #draw-panel svg { width: 100%; height: auto; }
 #draw-panel { overflow: auto; }
-#draw-info { font-size: 15px; color: #0f172a; font-weight: 700; margin: 10px 0 0; }
-#draw-counts { font-size: 14px; color: #374151; }
-#draw-pick { font-size: 14px; color: #0f172a; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; min-height: 2.4em; margin: 10px 0 0; padding: 8px 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { border-bottom: 1px solid #eef2f7; padding: 9px 6px; text-align: left; vertical-align: middle; }
+tbody tr:hover { background: #f8fafc; }
+th { color: #64748b; font-weight: 600; font-size: 13px; }
+td small { color: #64748b; }
+#draw-mat td:first-child svg { vertical-align: middle; }
+#draw-pick { display: flex; align-items: center; gap: 8px; }
 </style>
 </head>
 <body>
@@ -48,6 +52,7 @@ input[type="range"] { width: 220px; accent-color: #1d4ed8; }
 <p id="draw-counts"></p>
 <p id="draw-pick">보고 싶은 칸을 눌러 보세요.</p>
 </div>
+<div class="card" aria-label="필요한 블록"><h2 style="font-size:16px;margin:0 0 10px;">필요한 블록</h2><div id="draw-mat"></div></div>
 <footer class="sub" style="margin-top:8px;">원본 설계: <a href="https://m.blog.naver.com/sciencehahn/222157399308" target="_blank" rel="noopener">사한의 설계실 — 마인크래프트 엘시티 lct (2020-11-29)</a> · 층별 도면 PDF는 글 안의 구글 드라이브 링크</footer>
 </main>
 <script type="module">
@@ -129,8 +134,17 @@ function render() {
   const counts = summarizeMaterials(selectBlocks(model, { tower, layer: y }));
   $('draw-counts').textContent =
     counts.filter((c) => c.count > 0).map((c) => `${NICE[c.material]} ${c.count}개`).join(' · ') || '없음';
-  $('draw-range').value = y + 1;
-  $('draw-num').value = y + 1;
+  const total = summarizeMaterials(selectBlocks(model, { tower }));
+  const curById = Object.fromEntries(counts.map((c) => [c.material, c]));
+  $('draw-mat').innerHTML =
+    `<table><thead><tr><th>블록</th><th>다 지을 때</th><th>이 도면</th></tr></thead><tbody>` +
+    total
+      .map((t) => {
+        const c = curById[t.material] ?? { count: 0 };
+        return `<tr><td>${swatchSvg(t.material)} ${NICE[t.material]}<br><small>${GAME[t.material]}</small></td><td>${t.count}개 (${t.stacks64}묶음+${t.remainder})</td><td>${c.count}개</td></tr>`;
+      })
+      .join('') +
+    `</tbody></table>`;
 }
 
 function go(d) {
