@@ -34,7 +34,7 @@ test('CSV 왕복 집합이 모델과 같고 재료표가 블록에서 재집계�
   }
 });
 
-test('72개 도면 레이어 합집합이 모델과 같다', () => {
+test('75개 도면 레이어 합집합이 모델과 같다', () => {
   const model = buildModel();
   const seen = new Set();
   const maxY = Math.max(...model.blocks.map((b) => b.y));
